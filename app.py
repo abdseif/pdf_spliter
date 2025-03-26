@@ -1,29 +1,33 @@
 from flask import Flask, request, jsonify
-import fitz  # PyMuPDF
+from PyPDF2 import PdfReader, PdfWriter
+from io import BytesIO
 import base64
-import io
 
 app = Flask(__name__)
 
-@app.route('/')
-def home():
+@app.route("/")
+def index():
     return "PDF Splitter is live!"
 
-@app.route('/split_pdf', methods=['POST'])
+@app.route("/split_pdf", methods=["POST"])
 def split_pdf():
     if 'file' not in request.files:
-        return jsonify({'error': 'No file uploaded'}), 400
+        return jsonify({"error": "No file uploaded"}), 400
 
     file = request.files['file']
-    pdf = fitz.open(stream=file.read(), filetype="pdf")
+    input_pdf = PdfReader(file.stream)
+
     chunks = []
+    chunk_size = 10  # pages per split
+    for start in range(0, len(input_pdf.pages), chunk_size):
+        writer = PdfWriter()
+        for i in range(start, min(start + chunk_size, len(input_pdf.pages))):
+            writer.add_page(input_pdf.pages[i])
 
-    for i in range(0, pdf.page_count, 10):
-        chunk = fitz.open()
-        chunk.insert_pdf(pdf, from_page=i, to_page=min(i + 9, pdf.page_count - 1))
-        stream = io.BytesIO()
-        chunk.save(stream)
-        encoded = base64.b64encode(stream.getvalue()).decode("utf-8")
-        chunks.append(encoded)
+        buffer = BytesIO()
+        writer.write(buffer)
+        buffer.seek(0)
+        b64_data = base64.b64encode(buffer.read()).decode("utf-8")
+        chunks.append(b64_data)
 
-    return jsonify({ "chunks": chunks })
+    return jsonify({"chunks": chunks})
