@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "PDF Splitter is Live!"
+    return "PDF Splitter is live!"
 
 @app.route('/split_pdf', methods=['POST'])
 def split_pdf():
@@ -27,6 +27,3 @@ def split_pdf():
         chunks.append(encoded)
 
     return jsonify({ "chunks": chunks })
-
-if __name__ == "__main__":
-    app.run()
