@@ -1,3 +1,4 @@
   Flask
   PyMuPDF
+  PyPDF2
   gunicorn
