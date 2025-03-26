@@ -18,7 +18,8 @@ def split_pdf():
     input_pdf = PdfReader(file.stream)
 
     chunks = []
-    chunk_size = 10  # pages per split
+    chunk_size = 10  # Pages per split
+
     for start in range(0, len(input_pdf.pages), chunk_size):
         writer = PdfWriter()
         for i in range(start, min(start + chunk_size, len(input_pdf.pages))):
