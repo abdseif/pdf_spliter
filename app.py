@@ -1,34 +1,41 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, send_file, jsonify
 from PyPDF2 import PdfReader, PdfWriter
-from io import BytesIO
-import base64
+import io
+import zipfile
 
 app = Flask(__name__)
 
-@app.route("/")
-def index():
-    return "PDF Splitter is live!"
-
-@app.route("/split_pdf", methods=["POST"])
+@app.route('/split_pdf', methods=['POST'])
 def split_pdf():
     if 'file' not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
+        return jsonify({'error': 'No file part'}), 400
 
-    file = request.files['file']
-    input_pdf = PdfReader(file.stream)
+    uploaded_file = request.files['file']
+    if uploaded_file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
 
+    input_pdf = PdfReader(uploaded_file.stream)
+    total_pages = len(input_pdf.pages)
+
+    chunk_size = 5
     chunks = []
-    chunk_size = 5  # Pages per split
 
-    for start in range(0, len(input_pdf.pages), chunk_size):
+    for i in range(0, total_pages, chunk_size):
         writer = PdfWriter()
-        for i in range(start, min(start + chunk_size, len(input_pdf.pages))):
-            writer.add_page(input_pdf.pages[i])
+        for j in range(i, min(i + chunk_size, total_pages)):
+            writer.add_page(input_pdf.pages[j])
 
-        buffer = BytesIO()
-        writer.write(buffer)
-        buffer.seek(0)
-        b64_data = base64.b64encode(buffer.read()).decode("utf-8")
-        chunks.append(b64_data)
+        chunk_stream = io.BytesIO()
+        writer.write(chunk_stream)
+        chunk_stream.seek(0)
 
-    return jsonify({"chunks": chunks})
+        chunks.append((f'TS-{i + 1}-{min(i + chunk_size, total_pages)}.pdf', chunk_stream.read()))
+
+    # Package all chunks into a zip
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w') as zipf:
+        for filename, data in chunks:
+            zipf.writestr(filename, data)
+
+    zip_buffer.seek(0)
+    return send_file(zip_buffer, mimetype='application/zip', as_attachment=True, download_name='chunks.zip')
