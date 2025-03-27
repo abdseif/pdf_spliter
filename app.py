@@ -17,7 +17,7 @@ def split_pdf():
     input_pdf = PdfReader(uploaded_file.stream)
     total_pages = len(input_pdf.pages)
 
-    chunk_size = 5
+    chunk_size = 2
     chunks = []
 
     for i in range(0, total_pages, chunk_size):
